@@ -81,7 +81,7 @@ try:
     st.header("📈 ゴール決定率の推移")
 
     # 日付ごとに決定率を計算
-    trend_df = display_df.groupby('日付').agg(
+    trend_df = display_df.groupby('日時').agg(
         決定率=('結果数値', 'mean')
     ).reset_index()
     trend_df['決定率'] = (trend_df['決定率'] * 100).round(1)
@@ -96,5 +96,6 @@ try:
 
 except FileNotFoundError:
     st.warning("CSVファイルが見つかりません。")
+
 
 
