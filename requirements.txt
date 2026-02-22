@@ -2,5 +2,5 @@ streamlit
 pandas
 matplotlib
 seaborn
-japanize-matplotlib==1.1.3
+
 
