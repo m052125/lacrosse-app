@@ -7,7 +7,7 @@ from matplotlib import font_manager
 
 # --- ★フォント設定の魔法 ---
 # GitHubにアップロードしたフォントファイルを読み込む
-font_path = 'msmincho.ttc'  # アップロードしたファイル名に合わせてください
+font_path = 'FreeShootData.csv'  # アップロードしたファイル名に合わせてください
 font_prop = font_manager.FontProperties(fname=font_path)
 
 st.set_page_config(page_title="シュート分析", layout="wide")
@@ -78,3 +78,4 @@ try:
 
 except FileNotFoundError:
     st.warning("CSVファイルが見つかりません。")
+
