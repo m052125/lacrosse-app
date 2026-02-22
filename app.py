@@ -1,81 +1,81 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px  # 最新のグラフツール
 import numpy as np
-from matplotlib import font_manager
 
-# --- ★フォント設定の魔法 ---
-# GitHubにアップロードしたフォントファイルを読み込む
-font_path = 'FreeShootData.csv'  # アップロードしたファイル名に合わせてください
-font_prop = font_manager.FontProperties(fname=font_path)
-
+# ページの設定
 st.set_page_config(page_title="シュート分析", layout="wide")
 st.title("🥍 ラクロス部 シュート分析ダッシュボード")
 
 try:
+    # データの読み込み
     df = pd.read_csv('FreeShootData.csv')
-    df['ゴール判定'] = (df['結果'] == 'ゴール').astype(int)
+    df['結果数値'] = (df['結果'] == 'ゴール').astype(int)
     
-    # === 絞り込みメニュー ===
-    st.sidebar.header("検索フィルタ")
-    player_list = ['全体'] + list(df['背番号'].unique())
+    # --- サイドバーで絞り込み ---
+    st.sidebar.header("絞り込み設定")
+    player_list = ['全体'] + sorted(list(df['背番号'].unique().astype(str)))
     selected_player = st.sidebar.selectbox("選手を選択", player_list)
     
     if selected_player != '全体':
-        df = df[df['背番号'] == selected_player]
-        st.subheader(f"分析対象: {selected_player}")
+        display_df = df[df['背番号'].astype(str) == selected_player]
+        st.subheader(f"📊 分析対象: {selected_player}")
     else:
-        st.subheader("分析対象: 全体")
+        display_df = df
+        st.subheader("📊 分析対象: 全体")
 
-    # --- ① 数値まとめ ---
+    # --- ① スコア表示 ---
     col1, col2, col3 = st.columns(3)
-    col1.metric("総シュート数", f"{len(df)}本")
-    col2.metric("総ゴール数", f"{df['ゴール判定'].sum()}本")
-    rate = df['ゴール判定'].sum() / len(df) if len(df) > 0 else 0
+    total_shots = len(display_df)
+    total_goals = display_df['結果数値'].sum()
+    rate = total_goals / total_shots if total_shots > 0 else 0
+    
+    col1.metric("総シュート数", f"{total_shots}本")
+    col2.metric("総ゴール数", f"{total_goals}本")
     col3.metric("ゴール決定率", f"{rate:.1%}")
     
     st.divider()
     
-    # --- ② 表のサイズ調整（幅と高さを指定） ---
-    st.header("シューター別成績")
+    # --- ② 表の表示（サイズをコンパクトに） ---
+    st.header("🏃 シューター別成績")
     shooter_stats = df.groupby('背番号').agg(
         シュート数=('結果', 'count'),
-        ゴール数=('ゴール判定', 'sum')
-    )
-    shooter_stats['決定率'] = (shooter_stats['ゴール数'] / shooter_stats['シュート数']).apply(lambda x: f"{x:.1%}")
+        ゴール数=('結果数値', 'sum')
+    ).reset_index()
+    shooter_stats['決定率'] = (shooter_stats['ゴール数'] / shooter_stats['シュート数'] * 100).round(1).astype(str) + "%"
     
-    # 幅を500px、高さを300pxに制限して表示
-    st.dataframe(shooter_stats, width=500, height=300)
+    # 表の幅を小さく、高さを固定
+    st.dataframe(shooter_stats, width=450, height=300, hide_index=True)
     
     st.divider()
     
-    # --- ③ ヒートマップ ---
-    st.header("コース別ゴール数")
-    goals = df[df['結果'] == 'ゴール']
-    course_counts = goals['コース'].astype(str).value_counts()
+    # --- ③ ヒートマップ（Plotlyなら日本語が勝手に映る！） ---
+    st.header("🔥 コース別ゴール数")
+    goals = display_df[display_df['結果'] == 'ゴール']
     
+    # 1〜9番のグリッドデータを作成
     grid_names = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']]
-    heatmap_data = np.zeros((3, 3))
+    z_data = np.zeros((3, 3))
+    
+    counts = goals['コース'].value_counts()
     for i in range(3):
         for j in range(3):
-            name = grid_names[i][j]
-            if name in course_counts:
-                heatmap_data[i][j] = course_counts[name]
-                
-    fig, ax = plt.subplots(figsize=(5, 4))
-    sns.heatmap(heatmap_data, annot=True, cmap="Reds", fmt="g",
-                xticklabels=['左', '中央', '右'], 
-                yticklabels=['上', '中', '下'],
-                linewidths=1, linecolor='gray', ax=ax)
+            val = grid_names[i][j]
+            z_data[i][j] = counts.get(int(val) if val.isdigit() else val, 0)
+
+    # Plotlyでヒートマップ作成（これで日本語化けがなくなります！）
+    fig = px.imshow(
+        z_data,
+        labels=dict(x="左右", y="上下", color="ゴール数"),
+        x=['左', '中央', '右'],
+        y=['上', '中', '下'],
+        text_auto=True,
+        color_continuous_scale="Reds"
+    )
+    # グラフの見た目を調整
+    fig.update_layout(width=500, height=500)
     
-    # グラフの各パーツに日本語フォントを適用
-    plt.title('コース別ヒートマップ', fontproperties=font_prop)
-    ax.set_xticklabels(['左', '中央', '右'], fontproperties=font_prop)
-    ax.set_yticklabels(['上', '中', '下'], fontproperties=font_prop)
-    
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=False)
 
 except FileNotFoundError:
     st.warning("CSVファイルが見つかりません。")
-
