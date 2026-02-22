@@ -6,7 +6,7 @@ import numpy as np
 
 # Windowsの標準フォントを設定（文字化け対策）
 # plt.rcParams['font.family'] = 'Meiryo'
-plt.rcParams['font.family'] = 'DejaVu Sans'
+# plt.rcParams['font.family'] = 'DejaVu Sans'
 
 st.set_page_config(page_title="フリシュー分析", layout="wide")
 st.title("🥍 ラクロス部 フリシュー分析ダッシュボード")
@@ -63,3 +63,4 @@ try:
 except FileNotFoundError:
 
     st.warning("⚠️ 同じフォルダに 'FreeShootData.csv' を置いてください！")
+
