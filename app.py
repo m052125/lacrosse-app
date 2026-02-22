@@ -77,23 +77,24 @@ try:
     
     st.plotly_chart(fig, use_container_width=False)
 
-# --- ④ 決定率の推移グラフ（新機能！） ---
-st.header("📈 ゴール決定率の推移")
+    # --- ④ 決定率の推移グラフ（新機能！） ---
+    st.header("📈 ゴール決定率の推移")
 
-# 日付ごとに決定率を計算
-trend_df = display_df.groupby('日付').agg(
-    決定率=('結果数値', 'mean')
-).reset_index()
-trend_df['決定率'] = (trend_df['決定率'] * 100).round(1)
+    # 日付ごとに決定率を計算
+    trend_df = display_df.groupby('日付').agg(
+        決定率=('結果数値', 'mean')
+    ).reset_index()
+    trend_df['決定率'] = (trend_df['決定率'] * 100).round(1)
 
-# 線グラフを作成
-fig_line = px.line(
-    trend_df, x='日付', y='決定率',
-    title='日別の決定率推移 (%)',
-    markers=True
-)
-st.plotly_chart(fig_line, use_container_width=True)
+    # 線グラフを作成
+    fig_line = px.line(
+        trend_df, x='日付', y='決定率',
+        title='日別の決定率推移 (%)',
+        markers=True
+    )
+    st.plotly_chart(fig_line, use_container_width=True)
 
 except FileNotFoundError:
     st.warning("CSVファイルが見つかりません。")
+
 
