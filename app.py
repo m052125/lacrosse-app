@@ -8,12 +8,12 @@ st.set_page_config(page_title="ラクロス総合分析", layout="wide", page_ic
 st.title("🥍 ラクロス部 リアルタイム分析")
 
 # --- 設定：スプレッドシートのURL ---
-# 自分のスプレッドシートのURLをここに貼り付けてください
+# 1. ここにスプレッドシートのURLを貼り付けてください
 RAW_URL = "https://docs.google.com/spreadsheets/d/1Bx8lfO0kx0771QewN3J92CL7P0_M-IRx92jXPW7ELqs/edit?usp=sharing"
 
-# スプレッドシートをCSV形式で読み込むためのURL変換
+# URLをCSVエクスポート用に変換
 if "/edit" in RAW_URL:
-    CSV_URL = RAW_URL.replace("/edit", "/export?format=csv")
+    CSV_URL = RAW_URL.split("/edit")[0] + "/export?format=csv"
 else:
     CSV_URL = RAW_URL
 
@@ -35,69 +35,84 @@ def create_heatmap(data, title, color_scale, key_id):
     return st.plotly_chart(fig, use_container_width=False, key=key_id)
 
 try:
-    # データの読み込み（キャッシュを無効化して常に最新を取得）
-    # st.cache_dataを外すか、ttlを設定することでリアルタイム性を出します
+    # データの読み込み
     df = pd.read_csv(CSV_URL)
-    
-    # Googleフォームの項目名（タイムスタンプ等）を分析用の名前に変換
-    # フォームの項目名に合わせてここを自動調整します
-    rename_dict = {
-        'タイムスタンプ': '日時',
-        '質問1：ゴーリー': 'ゴーリー', # 自分のフォームの質問名に合わせてください
-        '質問2：背番号': '背番号',
-        '質問3：打つ位置': '打つ位置',
-        '質問4：コース': 'コース',
-        '質問5：結果': '結果'
-    }
-    # もしフォームの項目名が違う場合は、実際の列名を見て自動で合わせます
-    if 'タイムスタンプ' in df.columns:
-        df = df.rename(columns={'タイムスタンプ': '日時'})
-    
-    # 日付型に変換
-    df['日時'] = pd.to_datetime(df['日時']).dt.date
-    
-    # 基本判定フラグの作成
-    df['ゴール'] = (df['結果'] == 'ゴール').astype(int)
-    df['セーブ'] = (df['結果'] == 'セーブ').astype(int)
-    df['枠内'] = ((df['結果'] == 'ゴール') | (df['結果'] == 'セーブ')).astype(int)
 
-    # リスト取得
-    shooter_ids = sorted(df['背番号'].unique().astype(str))
-    goalie_names = sorted(df['ゴーリー'].unique().astype(str))
-    
-    # === タブ構成（以前と同じ） ===
-    tab_list = ["チーム全体", "🧤 ゴーリー集計"] + [f"🏃 {s}" for s in shooter_ids] + [f"🧤 {g}" for g in goalie_names]
-    tabs = st.tabs(tab_list)
+    if not df.empty:
+        # ★重要：列名を強制的にこれまでのCSVと同じ名前に上書きします
+        # Googleフォームは [タイムスタンプ, 質問1, 質問2...] の順で並ぶため
+        df.columns = ['日時', 'ゴーリー', '背番号', '打つ位置', 'コース', '結果']
+        
+        # 日付型に変換
+        df['日時'] = pd.to_datetime(df['日時']).dt.date
+        
+        # 基本判定フラグの作成
+        df['ゴール'] = (df['結果'] == 'ゴール').astype(int)
+        df['セーブ'] = (df['結果'] == 'セーブ').astype(int)
+        df['枠内'] = ((df['結果'] == 'ゴール') | (df['結果'] == 'セーブ')).astype(int)
 
-    # --- 1. チーム全体タブ ---
-    with tabs[0]:
-        st.header("🏢 チーム全体の成績")
-        col1, col2, col3 = st.columns([1, 1, 2])
-        with col1:
-            st.metric("総シュート数", f"{len(df)}本")
-            st.metric("総ゴール数", f"{df['ゴール'].sum()}本")
-        with col2:
-            create_heatmap(df[df['結果'] == 'ゴール'], "チーム全体の得点傾向", "Reds", "overall_heat")
-        with col3:
-            st.subheader("📋 最新の5件")
-            st.dataframe(df.sort_values('日時', ascending=False).head(5), use_container_width=True)
+        # リスト取得
+        shooter_ids = sorted(df['背番号'].unique().astype(str))
+        goalie_names = sorted(df['ゴーリー'].unique().astype(str))
+        
+        # === タブ構成 ===
+        tab_list = ["チーム全体", "🧤 ゴーリー集計"] + [f"🏃 {s}" for s in shooter_ids] + [f"🧤 {g}" for g in goalie_names]
+        tabs = st.tabs(tab_list)
 
-    # --- 2. ゴーリー集計タブ ---
-    with tabs[1]:
-        st.header("🧤 ゴーリー陣 総合分析")
-        g_stats = df.groupby('ゴーリー').agg(枠内=('枠内', 'sum'), セーブ=('セーブ', 'sum')).reset_index()
-        g_stats['セーブ率'] = (g_stats['セーブ'] / g_stats['枠内']).apply(lambda x: f"{x:.1%}" if x > 0 else "0.0%")
-        st.dataframe(g_stats, use_container_width=True, hide_index=True)
-        create_heatmap(df[df['結果'] == 'ゴール'], "ゴーリー陣全体の苦手傾向", "Oranges", "goalies_total_heat")
+        # --- 1. チーム全体タブ ---
+        with tabs[0]:
+            st.header("🏢 チーム全体の成績")
+            col1, col2, col3 = st.columns([1, 1, 2])
+            with col1:
+                st.metric("総シュート数", f"{len(df)}本")
+                st.metric("総ゴール数", f"{df['ゴール'].sum()}本")
+                st.metric("チーム決定率", f"{df['ゴール'].sum()/len(df):.1%}" if len(df)>0 else "0%")
+            with col2:
+                st.subheader("🔥 チーム得点コース")
+                create_heatmap(df[df['結果'] == 'ゴール'], "得点傾向", "Reds", "overall_heat")
+            with col3:
+                st.subheader("📋 最新の5件")
+                st.dataframe(df.sort_values('日時', ascending=False).head(5), use_container_width=True)
 
-    # --- 3. 選手・ゴーリー詳細（ループで生成） ---
-    # （※以前のコードと同じロジックで各タブを描画）
-    # ... (省略しますが、実際のコードには詳細タブも入ります) ...
+        # --- 2. ゴーリー集計タブ ---
+        with tabs[1]:
+            st.header("🧤 ゴーリー陣 総合分析")
+            col_g1, col_g2 = st.columns([2, 1])
+            with col_g1:
+                g_stats = df.groupby('ゴーリー').agg(枠内=('枠内', 'sum'), セーブ=('セーブ', 'sum')).reset_index()
+                g_stats['セーブ率'] = (g_stats['セーブ'] / g_stats['枠内']).apply(lambda x: f"{x:.1%}" if x > 0 else "0.0%")
+                st.dataframe(g_stats.sort_values('セーブ', ascending=False), use_container_width=True, hide_index=True)
+            with col_g2:
+                create_heatmap(df[df['結果'] == 'ゴール'], "被弾傾向", "Oranges", "goalies_total_heat")
 
-    # 自動更新ボタン
-    if st.button('最新データに更新'):
-        st.rerun()
+        # --- 3. 選手(シューター)別タブ ---
+        for i, s_id in enumerate(shooter_ids):
+            with tabs[i + 2]:
+                st.header(f"🏃 選手詳細: {s_id}")
+                s_df = df[df['背番号'].astype(str) == s_id]
+                c1, c2 = st.columns([3, 2])
+                with c1:
+                    trend = s_df.groupby('日時').agg(率=('ゴール', 'mean')).reset_index()
+                    st.plotly_chart(px.line(trend, x='日時', y='率', markers=True, range_y=[-0.1, 1.1]), key=f"t_s_{s_id}")
+                with c2:
+                    create_heatmap(s_df[s_df['結果'] == 'ゴール'], "得点エリア", "Reds", f"h_s_{s_id}")
+
+        # --- 4. ゴーリー詳細タブ ---
+        offset = 2 + len(shooter_ids)
+        for i, g_name in enumerate(goalie_names):
+            with tabs[i + offset]:
+                st.header(f"🧤 ゴーリー詳細: {g_name}")
+                g_df = df[df['ゴーリー'].astype(str) == g_name]
+                gc1, gc2 = st.columns([3, 2])
+                with gc1:
+                    g_trend = g_df[g_df['枠内']==1].groupby('日時').agg(率=('セーブ', 'mean')).reset_index()
+                    st.plotly_chart(px.line(g_trend, x='日時', y='率', markers=True, range_y=[-0.1, 1.1]), key=f"t_g_{g_name}")
+                with gc2:
+                    create_heatmap(g_df[g_df['結果'] == 'ゴール'], "失点エリア", "Oranges", f"h_g_{g_name}")
+
+    else:
+        st.warning("スプレッドシートにデータがありません。Unityから送信してください。")
 
 except Exception as e:
-    st.write("データを読み込み中、またはフォーム回答がまだありません。")
-    st.info("スプレッドシートに1件以上データがあるか確認してください。")
+    st.error(f"エラーが発生しました: {e}")
+    st.info("スプレッドシートのURLと共有設定（リンクを知っている全員）を確認してください。")
