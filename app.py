@@ -13,17 +13,17 @@ try:
     df['日時'] = pd.to_datetime(df['日時']).dt.date
     df['結果数値'] = (df['結果'] == 'ゴール').astype(int)
     
-    # 選手リストの作成（全体 ＋ 背番号順）
+    # 選手リストの作成
     player_ids = sorted(df['背番号'].unique().astype(str))
     tab_titles = ["チーム全体"] + player_ids
     
-    # === 🌟 選手ごとにタブを作成 ===
+    # === 選手ごとにタブを作成 ===
     tabs = st.tabs(tab_titles)
 
     for i, tab in enumerate(tabs):
+        target_player = tab_titles[i]
+        
         with tab:
-            target_player = tab_titles[i]
-            
             # データの絞り込み
             if target_player == "チーム全体":
                 display_df = df
@@ -44,7 +44,7 @@ try:
             
             st.divider()
 
-            # --- ② 分析グラフ（推移とヒートマップを横に並べる） ---
+            # --- ② 分析グラフ（推移とヒートマップ） ---
             col_graph_left, col_graph_right = st.columns([3, 2])
 
             with col_graph_left:
@@ -55,7 +55,9 @@ try:
                 fig_line = px.line(trend_df, x='日時', y='決定率', markers=True, text='決定率')
                 fig_line.update_traces(textposition="top center", line_color="#3366CC")
                 fig_line.update_layout(yaxis_range=[-5, 110], height=400)
-                st.plotly_chart(fig_line, use_container_width=True)
+                
+                # 🌟 エラー対策：keyに選手名を入れる
+                st.plotly_chart(fig_line, use_container_width=True, key=f"line_chart_{target_player}")
 
             with col_graph_right:
                 st.subheader("🔥 コース別ゴール数")
@@ -73,12 +75,13 @@ try:
                     text_auto=True, color_continuous_scale="Reds"
                 )
                 fig_heat.update_layout(width=350, height=350, margin=dict(l=20, r=20, t=20, b=20))
-                st.plotly_chart(fig_heat, use_container_width=False)
+                
+                # 🌟 エラー対策：keyに選手名を入れる
+                st.plotly_chart(fig_heat, use_container_width=False, key=f"heat_map_{target_player}")
 
             # --- ③ 詳細データの出力（表） ---
             st.divider()
             st.subheader("📋 記録データ一覧")
-            # 必要な列だけ選んで表示
             output_df = display_df[['日時', '打つ位置', 'コース', '結果']].sort_values('日時', ascending=False)
             st.dataframe(output_df, use_container_width=True, height=300)
 
