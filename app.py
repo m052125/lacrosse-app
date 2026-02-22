@@ -40,6 +40,7 @@ try:
         df.columns = ['日時', 'ゴーリー', '背番号', '打つ位置', 'コース', '結果']
         
         # データの整形
+        df['背番号'] = df['背番号'].astype(str).str.extract('(\d+)', expand=False).str.zfill(2)
         df['日時'] = pd.to_datetime(df['日時']).dt.date
         df['ゴール'] = (df['結果'] == 'ゴール').astype(int)
         df['セーブ'] = (df['結果'] == 'セーブ').astype(int)
@@ -110,3 +111,4 @@ except Exception as e:
     if 'df_raw' in locals():
         st.info(f"現在のスプレッドシートの列数: {len(df_raw.columns)} 列")
         st.write("実際の列名:", list(df_raw.columns))
+
