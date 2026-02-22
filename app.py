@@ -92,4 +92,11 @@ try:
 
         fig_heat = px.imshow(
             z_data, x=['左', '中央', '右'], y=['上', '中', '下'],
-            text_auto=True, color_continuous
+            text_auto=True, color_continuous_scale="Reds",
+            aspect="auto"
+        )
+        fig_heat.update_layout(width=450, height=400)
+        st.plotly_chart(fig_heat, use_container_width=False)
+
+except Exception as e:
+    st.error(f"エラーが発生しました: {e}")
