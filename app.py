@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import japanize_matplotlib
 
 # Windowsの標準フォントを設定（文字化け対策）
 # plt.rcParams['font.family'] = 'Meiryo'
@@ -63,4 +64,5 @@ try:
 except FileNotFoundError:
 
     st.warning("⚠️ 同じフォルダに 'FreeShootData.csv' を置いてください！")
+
 
