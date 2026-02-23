@@ -76,6 +76,33 @@ def create_3x3_heatmap(data_df, mode="course", title=""):
     fig.update_layout(width=450, height=450, coloraxis_showscale=False)
     return fig
 
+# 起点の2×2マッピング関数
+def create_2x2_origin_heatmap(data_df, title=""):
+    grid = np.zeros((2, 2))
+    # 四隅の起点を2x2にマッピング
+    mapping = {
+        '左上': (0, 0), '右上': (0, 1),
+        '左裏': (1, 0), '右裏': (1, 1)
+    }
+    
+    counts = data_df['起点'].dropna().astype(str).value_counts()
+    for val, count in counts.items():
+        if val in mapping:
+            r, c = mapping[val]
+            grid[r, c] = count
+
+    fig = px.imshow(
+        grid,
+        labels=dict(x="左右", y="位置", color="回数"),
+        x=['左', '右'],
+        y=['上', '裏'],
+        text_auto=True,
+        color_continuous_scale='YlOrRd',
+        title=title
+    )
+    fig.update_layout(width=350, height=350, coloraxis_showscale=False)
+    return fig
+
 # ==========================================
 # 3. サイドバー (分析モード切替)
 # ==========================================
