@@ -220,23 +220,24 @@ elif mode == "🟡 ゴーリー個人分析":
     
     st.header(f"🧤 ゴーリー: {selected_g} (対 {header_name}) の分析結果")
 
-    # 1. 円グラフセクション (シューター内訳 & 抜き方内訳)
-    col_pie1, col_pie2 = st.columns(2)
-    with col_pie1:
-        st.subheader("🥯 シューター(AT)別のショットシェア")
-        # 全体表示のときは全シューターの割合、個人選択時はその人のみが100%になる
-        fig_at_pie = px.pie(g_df, names='AT', hole=0.3)
-        st.plotly_chart(fig_at_pie, use_container_width=True)
+    
+    st.subheader(f"📊 {header_name} に対するセーブ実績")
+    shot_results = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])]
+    
+    if not shot_results.empty:
+        # シューター別のセーブ率算出
+        at_stats = shot_results.groupby('AT').agg(
+            対戦数=('結果', 'count'),
+            セーブ数=('結果', lambda x: (x == 'セーブ').sum())
+        ).reset_index()
+        at_stats['セーブ率(%)'] = (at_stats['セーブ数'] / at_stats['対戦数'] * 100).round(1)
+        at_stats['ラベル'] = at_stats['AT'] + " (" + at_stats['セーブ率(%)'].astype(str) + "%)"
         
-        
-    with col_pie2:
-        st.subheader("🥯 抜き方別の割合")
-        dodge_df = g_df[g_df['抜き方'] != "NULL"]
-        if not dodge_df.empty:
-            fig_dodge_pie = px.pie(dodge_df, names='抜き方', hole=0.3)
-            st.plotly_chart(fig_dodge_pie, use_container_width=True)
-        else:
-            st.info("抜き方のデータがありません")
+        # 円グラフでセーブ成功の内訳を表示
+        fig_save_pie = px.pie(at_stats, values='セーブ数', names='ラベル', hole=0.4, title="誰のショットをよく止めているか")
+        st.plotly_chart(fig_save_pie, use_container_width=True)
+    else:
+        st.info("集計可能なショットデータがまだありません。")
 
     st.divider()
 
