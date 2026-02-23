@@ -174,40 +174,52 @@ elif mode == "🔵 DF個人分析":
 
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー個人分析":
-    g_list = sorted(list(df['ゴーリー'].dropna().unique()))
-    selected_g = st.sidebar.selectbox("ゴーリーを選択", g_list)
-    g_df = df[df['ゴーリー'] == selected_g].copy()
+    # 1. サマリーと色分け棒グラフ
+    st.subheader("📊 シューター(AT)別の対戦成績")
     
-    st.header(f"🧤 ゴーリー: {selected_g} の詳細分析")
+    # シューター別の「対戦数」と「セーブ率」を同時に計算
+    shot_results = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])]
+    if not shot_results.empty:
+        at_stats = shot_results.groupby('AT').agg(
+            対戦数=('結果', 'count'),
+            セーブ数=('結果', lambda x: (x == 'セーブ').sum())
+        ).reset_index()
+        at_stats['セーブ率(%)'] = (at_stats['セーブ数'] / at_stats['対戦数'] * 100).round(1)
+        
+        # 色分け棒グラフ: 高さ=対戦数, 色=セーブ率
+        fig_at_bar = px.bar(
+            at_stats, x='AT', y='対戦数', color='セーブ率(%)',
+            color_continuous_scale='RdYlGn', # 赤(低)〜緑(高)
+            title="シューター別の対戦数とセーブ率 (色は阻止精度)",
+            text_auto=True
+        )
+        st.plotly_chart(fig_at_bar, use_container_width=True)
+    
+    st.divider()
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("総被ショット数", len(g_df[g_df['終わり方'] == 'ショット']))
-    with col2:
-        save_total = (g_df['結果'] == 'セーブ').sum()
-        st.metric("総セーブ数", save_total)
-    with col3:
-        shot_data = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])]
-        save_rate = (save_total / len(shot_data) * 100) if not shot_data.empty else 0
-        st.metric("トータルセーブ率", f"{save_rate:.1f}%")
+    # 2. 円グラフセクション
+    col_pie1, col_pie2 = st.columns(2)
+    with col_pie1:
+        st.subheader("🥯 シューター(AT)の割合")
+        fig_at_pie = px.pie(g_df, names='AT', hole=0.3, title="対戦したシューター分布")
+        st.plotly_chart(fig_at_pie, use_container_width=True)
+        
+    with col_pie2:
+        st.subheader("🥯 抜き方の割合")
+        dodge_df = g_df[g_df['抜き方'] != "NULL"]
+        fig_dodge_pie = px.pie(dodge_df, names='抜き方', hole=0.3, title="許した抜き方の分布")
+        st.plotly_chart(fig_dodge_pie, use_container_width=True)
 
     st.divider()
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        st.subheader("👤 シューター(AT)別の対戦数")
-        st.plotly_chart(px.bar(g_df['AT'].value_counts().reset_index(), x='AT', y='count'), use_container_width=True)
-    with col_g2:
-        st.subheader("🎯 抜き方別のセーブ率")
-        dodge_save = shot_data.groupby('抜き方')['結果'].apply(lambda x: (x == 'セーブ').sum() / len(x) * 100).reset_index(name='セーブ率(%)')
-        st.plotly_chart(px.bar(dodge_save, x='抜き方', y='セーブ率(%)', range_y=[0, 100]), use_container_width=True)
 
-    st.divider()
-    st.subheader("📊 ポジション別・コース別分析")
+    # 3. ヒートマップセクション
     col_h1, col_h2 = st.columns(2)
     with col_h1:
-        st.plotly_chart(create_3x3_heatmap(g_df[g_df['終わり方']=='ショット'], mode="origin", title="ショット起点ヒートマップ"), use_container_width=True)
+        # ショット起点ヒートマップ (2x2)
+        st.plotly_chart(create_2x2_origin_heatmap(g_df[g_df['終わり方']=='ショット'], title="ショット起点 (2×2マップ)"), use_container_width=True)
     with col_h2:
-        st.plotly_chart(create_3x3_heatmap(g_df[g_df['結果'] == 'セーブ'], mode="course", title="セーブコース分布"), use_container_width=True)
+        # セーブコース (3x3)
+        st.plotly_chart(create_3x3_heatmap(g_df[g_df['結果'] == 'セーブ'], title="セーブコース分布 (3×3)"), use_container_width=True)
 
 # --- 【📊 全データ】 ---
 else:
