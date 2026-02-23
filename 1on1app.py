@@ -201,33 +201,42 @@ elif mode == "🔵 DF個人分析":
 
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー個人分析":
+    # ゴーリー選択
     g_list = sorted(list(df['ゴーリー'].dropna().unique()))
     selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
-    g_df = df[df['ゴーリー'] == selected_g].copy()
+    g_full_df = df[df['ゴーリー'] == selected_g].copy()
     
-    st.header(f"🧤 ゴーリー: {selected_g} の分析結果")
-   # 1. シューター(AT)別の対戦成績 (円グラフ版)
-    st.subheader("📊 シューター(AT)別の対戦内訳")
-    shot_results = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])]
+    # 【新規】シューター（AT）選択プルダウン
+    at_options = ["全体"] + sorted(list(g_full_df['AT'].dropna().unique()))
+    selected_at = st.sidebar.selectbox("シューター(AT)を絞り込む", at_options)
     
-    if not shot_results.empty:
-        # シューター別の集計
-        at_stats = shot_results.groupby('AT').agg(
-            対戦数=('結果', 'count'),
-            セーブ数=('結果', lambda x: (x == 'セーブ').sum())
-        ).reset_index()
-        at_stats['セーブ率(%)'] = (at_stats['セーブ数'] / at_stats['対戦数'] * 100).round(1)
-        
-        # 円グラフ: 値=対戦数, ラベル=AT名+セーブ率
-        at_stats['ラベル'] = at_stats['AT'] + " (セーブ率: " + at_stats['セーブ率(%)'].astype(str) + "%)"
-        fig_at_pie = px.pie(
-            at_stats, values='対戦数', names='ラベル',
-            hole=0.4, title="シューター別のショットシェアとセーブ精度"
-        )
+    # データのフィルタリング
+    if selected_at == "全体":
+        g_df = g_full_df
+        header_name = "全体"
+    else:
+        g_df = g_full_df[g_full_df['AT'] == selected_at]
+        header_name = selected_at
+    
+    st.header(f"🧤 ゴーリー: {selected_g} (対 {header_name}) の分析結果")
+
+    # 1. 円グラフセクション (シューター内訳 & 抜き方内訳)
+    col_pie1, col_pie2 = st.columns(2)
+    with col_pie1:
+        st.subheader("🥯 シューター(AT)別のショットシェア")
+        # 全体表示のときは全シューターの割合、個人選択時はその人のみが100%になる
+        fig_at_pie = px.pie(g_df, names='AT', hole=0.3)
         st.plotly_chart(fig_at_pie, use_container_width=True)
         
-    else:
-        st.info("集計可能なショットデータがまだありません。")
+        
+    with col_pie2:
+        st.subheader("🥯 抜き方別の割合")
+        dodge_df = g_df[g_df['抜き方'] != "NULL"]
+        if not dodge_df.empty:
+            fig_dodge_pie = px.pie(dodge_df, names='抜き方', hole=0.3)
+            st.plotly_chart(fig_dodge_pie, use_container_width=True)
+        else:
+            st.info("抜き方のデータがありません")
 
     st.divider()
 
