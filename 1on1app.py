@@ -114,7 +114,7 @@ mode = st.sidebar.radio("表示モード", ["🔴 AT分析", "🔵 DF分析", "�
 # ==========================================
 
 # --- 【🔴 AT個人分析】 ---
-if mode == "🔴 AT個人分析":
+if mode == "🔴 AT分析":
     at_list = ["全体"] + sorted(list(df['AT'].dropna().unique()))
     selected_at = st.sidebar.selectbox("分析するATを選択", at_list)
     
@@ -135,7 +135,7 @@ if mode == "🔴 AT個人分析":
         shot_total = len(at_df[at_df['終わり方'] == 'ショット'])
         goals = len(at_df[at_df['結果'] == 'ゴール'])
         shot_rate = (goals / shot_total * 100) if shot_total > 0 else 0
-        st.metric("トータルショット率", f"{shot_rate:.1f}%")
+        st.metric("合計ショット率", f"{shot_rate:.1f}%")
 
     # --- グラフセクション ---
     st.divider()
@@ -192,7 +192,7 @@ if mode == "🔴 AT個人分析":
     st.plotly_chart(create_3x3_heatmap(at_df[at_df['結果']=='ゴール'], mode="course", title="ゴール決定コース"), use_container_width=True)
 
 # --- 【🔵 DF個人分析】 ---
-elif mode == "🔵 DF個人分析":
+elif mode == "🔵 DF分析":
     df_list = ["全体"] + sorted(list(df['DF'].dropna().unique()))
     selected_df = st.sidebar.selectbox("分析するDFを選択", df_list)
     
@@ -214,7 +214,7 @@ elif mode == "🔵 DF個人分析":
         st.metric("対戦したAT数", target_df['AT'].nunique())
 
     st.divider()
-    st.subheader("📍 ショットを打たれた位置(扇形1-10)の分布")
+    st.subheader("📍 ショットを打たれた位置の分布")
     if 'ショット位置' in target_df.columns:
         df_shot_df = target_df[target_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
         if not df_shot_df.empty:
@@ -242,7 +242,7 @@ elif mode == "🔵 DF個人分析":
     st.plotly_chart(create_3x3_heatmap(target_df[target_df['抜かれた']==1], mode="origin", title="ショットを許した起点マップ"), use_container_width=True)
 
 # --- 【🟡 ゴーリー詳細分析】 ---
-elif mode == "🟡 ゴーリー個人分析":
+elif mode == "🟡 ゴーリー分析":
     # ゴーリー選択
     g_list = ["全体"] + sorted(list(df['ゴーリー'].dropna().unique()))
     selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
@@ -266,7 +266,7 @@ elif mode == "🟡 ゴーリー個人分析":
     
     st.header(f"🧤 ゴーリー: {selected_g} (対 {header_name}) の分析結果")
 
-    st.subheader("📍 打たれた位置(扇形1-10)別のセーブ率")
+    st.subheader("📍 打たれた位置別のセーブ率")
     if 'ショット位置' in g_df.columns:
         g_shot_df = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])].dropna(subset=['ショット位置'])
         if not g_shot_df.empty:
