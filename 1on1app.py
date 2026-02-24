@@ -107,7 +107,7 @@ def create_2x2_origin_heatmap(data_df, title=""):
 # 3. サイドバー (分析モード切替)
 # ==========================================
 st.sidebar.header("🔍 メインメニュー")
-mode = st.sidebar.radio("表示モード", ["🔴 AT個人分析", "🔵 DF個人分析", "🟡 ゴーリー個人分析", "📊 全データ"])
+mode = st.sidebar.radio("表示モード", ["🔴 AT分析", "🔵 DF分析", "🟡 ゴーリー分析", "📊 全データ"])
 
 # ==========================================
 # 4. 各モードの表示ロジック
@@ -115,9 +115,13 @@ mode = st.sidebar.radio("表示モード", ["🔴 AT個人分析", "🔵 DF個�
 
 # --- 【🔴 AT個人分析】 ---
 if mode == "🔴 AT個人分析":
-    at_list = sorted(list(df['AT'].dropna().unique()))
+    at_list = ["全体"] + sorted(list(df['AT'].dropna().unique()))
     selected_at = st.sidebar.selectbox("分析するATを選択", at_list)
-    at_df = df[df['AT'] == selected_at]
+    
+    if selected_at == "全体":
+        at_df = df.dropna(subset=['AT'])
+    else:
+        at_df = df[df['AT'] == selected_at]
     
     st.header(f"👤 AT選手: {selected_at} の分析結果")
     
@@ -149,7 +153,7 @@ if mode == "🔴 AT個人分析":
         st.plotly_chart(px.pie(hand_df, names='利き手', hole=0.4), use_container_width=True)
     # --- 【新規】打った場所(1-10)ごとのショット率 ---
     st.divider()
-    st.subheader("📍 打った位置(扇形1-10)別のショット決定率")
+    st.subheader("📍 打った位置別のショット決定率")
     if 'ショット位置' in at_df.columns:
         at_shot_df = at_df[at_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
         if not at_shot_df.empty:
@@ -189,9 +193,13 @@ if mode == "🔴 AT個人分析":
 
 # --- 【🔵 DF個人分析】 ---
 elif mode == "🔵 DF個人分析":
-    df_list = sorted(list(df['DF'].dropna().unique()))
+    df_list = ["全体"] + sorted(list(df['DF'].dropna().unique()))
     selected_df = st.sidebar.selectbox("分析するDFを選択", df_list)
-    target_df = df[df['DF'] == selected_df].copy()
+    
+    if selected_df == "全体":
+        target_df = df.dropna(subset=['DF']).copy()
+    else:
+        target_df = df[df['DF'] == selected_df].copy()
     
     st.header(f"🛡️ DF選手: {selected_df} の分析結果")
 
@@ -236,9 +244,13 @@ elif mode == "🔵 DF個人分析":
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー個人分析":
     # ゴーリー選択
-    g_list = sorted(list(df['ゴーリー'].dropna().unique()))
+    g_list = ["全体"] + sorted(list(df['ゴーリー'].dropna().unique()))
     selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
-    g_full_df = df[df['ゴーリー'] == selected_g].copy()
+    
+    if selected_g == "全体":
+        g_full_df = df.dropna(subset=['ゴーリー']).copy()
+    else:
+        g_full_df = df[df['ゴーリー'] == selected_g].copy()
     
     # 【新規】シューター（AT）選択プルダウン
     at_options = ["全体"] + sorted(list(g_full_df['AT'].dropna().unique()))
