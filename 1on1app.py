@@ -14,7 +14,7 @@ st.title("🥍 1on1 総合戦略分析ダッシュボード")
 @st.cache_data(ttl=30)
 def load_data():
     SHEET_ID = "1hRkai8KYkb2nM8ZHA5h56JGst8pp9t8jUHu2jV-Nd2E"
-    GID = "577630225"
+    GID = "1086529984"
     csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
     
     try:
