@@ -147,7 +147,28 @@ if mode == "🔴 AT個人分析":
         st.subheader("✋ ショットを打った手")
         hand_df = at_df[at_df['利き手'] != "NULL"]
         st.plotly_chart(px.pie(hand_df, names='利き手', hole=0.4), use_container_width=True)
-
+    # --- 【新規】打った場所(1-10)ごとのショット率 ---
+    st.divider()
+    st.subheader("📍 打った位置(扇形1-10)別のショット決定率")
+    if 'ショット位置' in at_df.columns:
+        at_shot_df = at_df[at_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
+        if not at_shot_df.empty:
+            loc_stats = at_shot_df.groupby('ショット位置').agg(
+                打った数=('結果', 'count'),
+                ゴール数=('結果', lambda x: (x == 'ゴール').sum())
+            ).reset_index()
+            loc_stats['ショット率(%)'] = (loc_stats['ゴール数'] / loc_stats['打った数'] * 100).round(1)
+            
+            # X軸を文字列にして1〜10の順番を揃えやすくする
+            loc_stats['ショット位置'] = loc_stats['ショット位置'].astype(str)
+            fig_at_loc = px.bar(loc_stats, x='ショット位置', y='ショット率(%)', color='ショット率(%)', 
+                                color_continuous_scale='Reds', text_auto=True, title="どのエリアから決めているか")
+            st.plotly_chart(fig_at_loc, use_container_width=True)
+        else:
+            st.info("ショット位置のデータがまだありません。")
+    else:
+        st.info("スプレッドシートに「ショット位置」の列がまだありません。")
+    
     # --- 表セクション ---
     st.divider()
     st.subheader("📈 詳細データ集計表")
@@ -185,6 +206,19 @@ elif mode == "🔵 DF個人分析":
         st.metric("対戦したAT数", target_df['AT'].nunique())
 
     st.divider()
+    st.subheader("📍 ショットを打たれた位置(扇形1-10)の分布")
+    if 'ショット位置' in target_df.columns:
+        df_shot_df = target_df[target_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
+        if not df_shot_df.empty:
+            df_shot_df['ショット位置'] = df_shot_df['ショット位置'].astype(str)
+            fig_df_loc = px.pie(df_shot_df, names='ショット位置', hole=0.3, title="どのエリアまで侵入を許しているか")
+            st.plotly_chart(fig_df_loc, use_container_width=True)
+        else:
+            st.info("ショット位置のデータがまだありません。")
+    else:
+        st.info("スプレッドシートに「ショット位置」の列がまだありません。")
+        
+    st.divider()
     st.subheader("📊 抜かれたかどうか (起点×抜き方)")
     target_df['抜かれた'] = target_df['終わり方'].apply(lambda x: 1 if x == 'ショット' else 0)
     target_df['抜かれなかった'] = target_df['終わり方'].apply(lambda x: 1 if x != 'ショット' else 0)
@@ -220,7 +254,25 @@ elif mode == "🟡 ゴーリー個人分析":
     
     st.header(f"🧤 ゴーリー: {selected_g} (対 {header_name}) の分析結果")
 
-    
+    st.subheader("📍 打たれた位置(扇形1-10)別のセーブ率")
+    if 'ショット位置' in g_df.columns:
+        g_shot_df = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])].dropna(subset=['ショット位置'])
+        if not g_shot_df.empty:
+            g_loc_stats = g_shot_df.groupby('ショット位置').agg(
+                被ショット数=('結果', 'count'),
+                セーブ数=('結果', lambda x: (x == 'セーブ').sum())
+            ).reset_index()
+            g_loc_stats['セーブ率(%)'] = (g_loc_stats['セーブ数'] / g_loc_stats['被ショット数'] * 100).round(1)
+            
+            g_loc_stats['ショット位置'] = g_loc_stats['ショット位置'].astype(str)
+            fig_g_loc = px.bar(g_loc_stats, x='ショット位置', y='セーブ率(%)', color='セーブ率(%)', 
+                               color_continuous_scale='Blues', text_auto=True, title="どのエリアからのショットを止めやすいか")
+            st.plotly_chart(fig_g_loc, use_container_width=True)
+        else:
+            st.info("ショット位置のデータがまだありません。")
+    else:
+        st.info("スプレッドシートに「ショット位置」の列がまだありません。")
+        
     st.subheader(f"📊 {header_name} に対するセーブ実績")
     shot_results = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])]
     
