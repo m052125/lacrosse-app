@@ -29,11 +29,52 @@ def load_data():
         st.error(f"データの読み込みに失敗しました: {e}")
         return pd.DataFrame()
 
-df = load_data()
+# 生データの読み込み
+raw_df = load_data()
 
-if df.empty:
+if raw_df.empty:
     st.warning("データがまだ読み込めません。Unityアプリからデータを送信してください。")
     st.stop()
+
+# ==========================================
+# 【新規追加】 サイドバー：期間フィルター
+# ==========================================
+st.sidebar.header("📅 期間フィルター")
+
+if 'タイムスタンプ' in raw_df.columns and not raw_df['タイムスタンプ'].dropna().empty:
+    min_date = raw_df['タイムスタンプ'].min().date()
+    max_date = raw_df['タイムスタンプ'].max().date()
+    
+    # 日付ピッカーを表示（デフォルトは全期間）
+    selected_date_range = st.sidebar.date_input(
+        "分析する期間を選択",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+    
+    # 選択された期間でデータフレームを絞り込み
+    if isinstance(selected_date_range, tuple):
+        if len(selected_date_range) == 2:
+            start_date, end_date = selected_date_range
+            # 終了日はその日の23:59:59までを含めるように調整
+            start_dt = pd.to_datetime(start_date)
+            end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+            df = raw_df[(raw_df['タイムスタンプ'] >= start_dt) & (raw_df['タイムスタンプ'] <= end_dt)].copy()
+        elif len(selected_date_range) == 1:
+            start_date = selected_date_range[0]
+            start_dt = pd.to_datetime(start_date)
+            end_dt = start_dt + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+            df = raw_df[(raw_df['タイムスタンプ'] >= start_dt) & (raw_df['タイムスタンプ'] <= end_dt)].copy()
+        else:
+            df = raw_df.copy()
+    else:
+        df = raw_df.copy()
+else:
+    # タイムスタンプがない、または全て空の場合はそのまま
+    df = raw_df.copy()
+
+st.sidebar.markdown("---")
 
 # ==========================================
 # 【新規追加】テスト用の先輩・コーチメンバーリスト
