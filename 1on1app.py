@@ -251,7 +251,9 @@ elif mode == "🔵 DF分析":
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー分析":
     # ゴーリー選択
-    unique_g_names = set(df['ゴーリー'].dropna().unique().tolist() + test_members)selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
+    unique_g_names = set(df['ゴーリー'].dropna().unique().tolist() + test_members)
+    g_list = ["全体"] + sorted(list(unique_g_names))
+    selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
     if selected_g == "全体":
         g_full_df = df.dropna(subset=['ゴーリー']).copy()
     else:
