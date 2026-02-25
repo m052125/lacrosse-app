@@ -119,40 +119,33 @@ def create_at_course_heatmap(data_df, title=""):
         '7': (2, 0), '8': (2, 1), '9': (2, 2)
     }
     
-    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    shot_df = data_df[data_df['終わり方'] == 'ショット'].copy()
+    # 小数点を排除してきれいな文字列に
+    shot_df['コース_clean'] = pd.to_numeric(shot_df['コース'], errors='coerce').fillna(0).astype(int).astype(str)
     
     for course_num, (r, c) in mapping.items():
-        # そのコースに打たれた全ショットデータ
-        course_data = shot_df[shot_df['コース'].astype(str) == course_num]
+        course_data = shot_df[shot_df['コース_clean'] == course_num]
         total_shots = len(course_data)
         goals = len(course_data[course_data['結果'] == 'ゴール'])
-        
         if total_shots > 0:
             rate = (goals / total_shots) * 100
             grid_color[r, c] = rate
-            # ゴール数/ショット数 と 決定率(%) を改行(<br>)して表示
             grid_text[r, c] = f"{goals}/{total_shots}<br>({rate:.1f}%)"
         else:
             grid_color[r, c] = 0
             grid_text[r, c] = "0/0<br>(0.0%)"
             
     fig = px.imshow(
-        grid_color,
-        labels=dict(x="左右", y="位置", color="決定率(%)"),
-        x=['左', '中', '右'],
-        y=['上', '中', '下'],
-        color_continuous_scale='Reds',
-        title=title
+        grid_color, labels=dict(x="左右", y="位置", color="決定率(%)"),
+        x=['左', '中', '右'], y=['上', '中', '下'], color_continuous_scale='Reds', title=title
     )
-    # 独自に作成したテキスト(grid_text)を各マスに重ねる
     fig.update_traces(text=grid_text, texttemplate="%{text}")
-    # 色のスケールバー(coloraxis)を表示して、パーセンテージの目安をわかりやすくする
     fig.update_layout(width=450, height=450, coloraxis_showscale=True)
     return fig
 
 # 【新規追加・DF分析用】起点別 被ショット率ヒートマップ
 def create_df_origin_ratio_heatmap(data_df, title=""):
-    grid_color = np.full((3, 3), np.nan) # 空白マスを透過させるためnanで初期化
+    grid_color = np.full((3, 3), np.nan) 
     grid_text = np.full((3, 3), "", dtype=object) 
     
     mapping = {
@@ -161,8 +154,11 @@ def create_df_origin_ratio_heatmap(data_df, title=""):
         '左裏': (2, 0), '右裏': (2, 2)
     }
     
+    data_df = data_df.copy()
+    data_df['起点_clean'] = data_df['起点'].astype(str).str.strip()
+    
     for origin, (r, c) in mapping.items():
-        origin_data = data_df[data_df['起点'] == origin]
+        origin_data = data_df[data_df['起点_clean'] == origin]
         total_matchups = len(origin_data)
         shots_allowed = len(origin_data[origin_data['終わり方'] == 'ショット'])
         
@@ -182,17 +178,17 @@ def create_df_origin_ratio_heatmap(data_df, title=""):
     fig.update_layout(width=450, height=450, coloraxis_showscale=True)
     return fig
 
-# 【新規追加・ゴーリー分析用】起点別 セーブ率ヒートマップ (2x2)
+# 【ゴーリー分析用】起点別 セーブ率ヒートマップ (2x2)
 def create_goalie_origin_ratio_heatmap(data_df, title=""):
     grid_color = np.zeros((2, 2))
     grid_text = np.empty((2, 2), dtype=object)
     mapping = {'左上': (0, 0), '右上': (0, 1), '左裏': (1, 0), '右裏': (1, 1)}
     
-    # ショットまで至ったデータのみを対象
-    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    shot_df = data_df[data_df['終わり方'] == 'ショット'].copy()
+    shot_df['起点_clean'] = shot_df['起点'].astype(str).str.strip()
     
     for origin, (r, c) in mapping.items():
-        origin_shots = shot_df[shot_df['起点'] == origin]
+        origin_shots = shot_df[shot_df['起点_clean'] == origin]
         total_shots = len(origin_shots)
         saves = len(origin_shots[origin_shots['結果'] == 'セーブ'])
         
@@ -212,7 +208,7 @@ def create_goalie_origin_ratio_heatmap(data_df, title=""):
     fig.update_layout(width=350, height=350, coloraxis_showscale=True)
     return fig
 
-# 【新規追加・ゴーリー分析用】コース別 セーブ率ヒートマップ (3x3)
+# 【ゴーリー分析用】コース別 セーブ率ヒートマップ (3x3)
 def create_goalie_course_ratio_heatmap(data_df, title=""):
     grid_color = np.zeros((3, 3)) 
     grid_text = np.empty((3, 3), dtype=object) 
@@ -222,10 +218,11 @@ def create_goalie_course_ratio_heatmap(data_df, title=""):
         '7': (2, 0), '8': (2, 1), '9': (2, 2)
     }
     
-    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    shot_df = data_df[data_df['終わり方'] == 'ショット'].copy()
+    shot_df['コース_clean'] = pd.to_numeric(shot_df['コース'], errors='coerce').fillna(0).astype(int).astype(str)
     
     for course_num, (r, c) in mapping.items():
-        course_data = shot_df[shot_df['コース'].astype(str) == course_num]
+        course_data = shot_df[shot_df['コース_clean'] == course_num]
         total_shots = len(course_data)
         saves = len(course_data[course_data['結果'] == 'セーブ'])
         
@@ -245,25 +242,23 @@ def create_goalie_course_ratio_heatmap(data_df, title=""):
     fig.update_layout(width=450, height=450, coloraxis_showscale=True)
     return fig
 
-# 【新規追加】ショット位置(1-10)の2x5割合ヒートマップ
+# 【修正】ショット位置(1-10)の2x5割合ヒートマップ
 def create_shot_position_heatmap(data_df, mode="AT", title=""):
     grid_color = np.zeros((2, 5)) 
     grid_text = np.empty((2, 5), dtype=object) 
     
-    # 1〜10の配置 (2x5グリッド)
     mapping = {
         '1': (0, 0), '2': (0, 1), '3': (0, 2), '4': (0, 3), '5': (0, 4),
         '6': (1, 0), '7': (1, 1), '8': (1, 2), '9': (1, 3), '10': (1, 4)
     }
     
-    # ショットまで至ったデータのみを対象
-    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    shot_df = data_df[data_df['終わり方'] == 'ショット'].copy()
+    shot_df['ショット位置_clean'] = pd.to_numeric(shot_df['ショット位置'], errors='coerce').fillna(0).astype(int).astype(str)
     
     for loc_num, (r, c) in mapping.items():
-        loc_data = shot_df[shot_df['ショット位置'].astype(str) == loc_num]
+        loc_data = shot_df[shot_df['ショット位置_clean'] == loc_num]
         total_shots = len(loc_data)
         
-        # モードに応じた計算と色分け
         if mode == "AT":
             success = len(loc_data[loc_data['結果'] == 'ゴール'])
             color_scale = 'Reds'
@@ -280,7 +275,6 @@ def create_shot_position_heatmap(data_df, mode="AT", title=""):
         if total_shots > 0:
             rate = (success / total_shots) * 100
             grid_color[r, c] = rate
-            # 場所番号を[1]のように記載して分かりやすくする
             grid_text[r, c] = f"[{loc_num}]<br>{success}/{total_shots}<br>({rate:.1f}%)"
         else:
             grid_color[r, c] = 0
@@ -292,7 +286,6 @@ def create_shot_position_heatmap(data_df, mode="AT", title=""):
         color_continuous_scale=color_scale, title=title
     )
     fig.update_traces(text=grid_text, texttemplate="%{text}")
-    # 2x5なので横長に設定
     fig.update_layout(width=700, height=350, coloraxis_showscale=True)
     return fig
     
