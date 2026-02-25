@@ -108,6 +108,147 @@ def create_2x2_origin_heatmap(data_df, title=""):
     fig.update_layout(width=350, height=350, coloraxis_showscale=False)
     return fig
 
+AT（アタック）分析の精度をさらに上げる、素晴らしいアイデアですね！
+「右手 / 左手」の明確な絞り込みと、**「コース別のショット決定率（ゴール数 / 打った数）のヒートマップ可視化」**を実装しました。
+
+ヒートマップには、単なる色分けだけでなく**「2/5 (40.0%)」**のように、実際のゴール数とショット数の内訳が各マスに表示される専用の関数を新しく追加しています。
+
+以下のコードで 1on1app.py を上書き保存してください！
+
+1on1app.py（AT分析強化版 フルコード）
+Python
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import numpy as np
+
+# ページ設定
+st.set_page_config(page_title="1on1 総合分析ダッシュボード", layout="wide")
+
+st.title("🥍 1on1 総合戦略分析ダッシュボード")
+
+# ==========================================
+# 1. データの読み込み (Googleスプレッドシート)
+# ==========================================
+@st.cache_data(ttl=30)
+def load_data():
+    SHEET_ID = "1hRkai8KYkb2nM8ZHA5h56JGst8pp9t8jUHu2jV-Nd2E"
+    GID = "935578573"
+    csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
+    
+    try:
+        df = pd.read_csv(csv_url)
+        df = df.rename(columns={
+            'ショットを打った手': '利き手',
+            'ショットコース': 'コース',
+            'ショット結果': '結果'
+        })
+        return df
+    except Exception as e:
+        st.error(f"データの読み込みに失敗しました: {e}")
+        return pd.DataFrame()
+
+df = load_data()
+
+if df.empty:
+    st.warning("データがまだ読み込めません。Unityアプリからデータを送信してください。")
+    st.stop()
+
+# ==========================================
+# 【テスト用】先輩・コーチメンバーリスト
+# ==========================================
+test_members = ['#11', '#26', '#67', 'パズー', 'りむ', 'うり', 'ばら', 'いず', 'はな']
+
+# ==========================================
+# 2. ヒートマップ描画関数群
+# ==========================================
+
+# (共通) 3x3 単純カウントヒートマップ
+def create_3x3_heatmap(data_df, mode="course", title=""):
+    grid = np.zeros((3, 3))
+    if mode == "course":
+        mapping = {'1': (0,0), '2': (0,1), '3': (0,2), '4': (1,0), '5': (1,1), '6': (1,2), '7': (2,0), '8': (2,1), '9': (2,2)}
+        col_target = 'コース'
+        y_labels = ['上', '中', '下']
+    else:
+        mapping = {'左上': (0,0), 'センター': (0,1), '右上': (0,2), '左横': (1,0), '右横': (1,2), '左裏': (2,0), '右裏': (2,2)}
+        col_target = '起点'
+        y_labels = ['上', '横', '裏']
+
+    counts = data_df[col_target].dropna().astype(str).value_counts()
+    for val, count in counts.items():
+        if val in mapping:
+            r, c = mapping[val]
+            grid[r, c] = count
+
+    fig = px.imshow(
+        grid, labels=dict(x="左右", y="位置", color="回数"),
+        x=['左', '中', '右'], y=y_labels, text_auto=True,
+        color_continuous_scale='OrRd', title=title
+    )
+    fig.update_layout(width=450, height=450, coloraxis_showscale=False)
+    return fig
+
+# (共通) 2x2 起点マップ
+def create_2x2_origin_heatmap(data_df, title=""):
+    grid = np.zeros((2, 2))
+    mapping = {'左上': (0,0), '右上': (0,1), '左裏': (1,0), '右裏': (1,1)}
+    counts = data_df['起点'].dropna().astype(str).value_counts()
+    for val, count in counts.items():
+        if val in mapping:
+            r, c = mapping[val]
+            grid[r, c] = count
+
+    fig = px.imshow(
+        grid, labels=dict(x="左右", y="位置", color="回数"),
+        x=['左', '右'], y=['上', '裏'], text_auto=True,
+        color_continuous_scale='YlOrRd', title=title
+    )
+    fig.update_layout(width=350, height=350, coloraxis_showscale=False)
+    return fig
+
+# 【新規追加】AT分析用：コース別 決定率ヒートマップ
+def create_at_course_heatmap(data_df, title=""):
+    grid_color = np.zeros((3, 3)) # 色（決定率）用
+    grid_text = np.empty((3, 3), dtype=object) # テキスト表示用
+    
+    mapping = {
+        '1': (0, 0), '2': (0, 1), '3': (0, 2),
+        '4': (1, 0), '5': (1, 1), '6': (1, 2),
+        '7': (2, 0), '8': (2, 1), '9': (2, 2)
+    }
+    
+    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    
+    for course_num, (r, c) in mapping.items():
+        # そのコースに打たれた全ショットデータ
+        course_data = shot_df[shot_df['コース'].astype(str) == course_num]
+        total_shots = len(course_data)
+        goals = len(course_data[course_data['結果'] == 'ゴール'])
+        
+        if total_shots > 0:
+            rate = (goals / total_shots) * 100
+            grid_color[r, c] = rate
+            # ゴール数/ショット数 と 決定率(%) を改行(<br>)して表示
+            grid_text[r, c] = f"{goals}/{total_shots}<br>({rate:.1f}%)"
+        else:
+            grid_color[r, c] = 0
+            grid_text[r, c] = "0/0<br>(0.0%)"
+            
+    fig = px.imshow(
+        grid_color,
+        labels=dict(x="左右", y="位置", color="決定率(%)"),
+        x=['左', '中', '右'],
+        y=['上', '中', '下'],
+        color_continuous_scale='Reds',
+        title=title
+    )
+    # 独自に作成したテキスト(grid_text)を各マスに重ねる
+    fig.update_traces(text=grid_text, texttemplate="%{text}")
+    # 色のスケールバー(coloraxis)を表示して、パーセンテージの目安をわかりやすくする
+    fig.update_layout(width=450, height=450, coloraxis_showscale=True)
+    return fig
+
 # ==========================================
 # 3. サイドバー (分析モード切替)
 # ==========================================
@@ -154,9 +295,14 @@ if mode == "🔴 AT分析":
         dodge_df = at_df[at_df['抜き方'] != "NULL"]
         st.plotly_chart(px.pie(dodge_df, names='抜き方', hole=0.4), use_container_width=True)
     with col_g3:
-        st.subheader("✋ ショットを打った手")
-        hand_df = at_df[at_df['利き手'] != "NULL"]
-        st.plotly_chart(px.pie(hand_df, names='利き手', hole=0.4), use_container_width=True)
+            st.subheader("✋ ショットを打った手")
+            # 【修正点】NULLなどを排除し、「右手」「左手」に完全一致するものだけを円グラフにする
+            hand_df = at_df[at_df['利き手'].isin(['右手', '左手'])]
+            if not hand_df.empty:
+                st.plotly_chart(px.pie(hand_df, names='利き手', hole=0.4), use_container_width=True)
+            else:
+                st.info("利き手のデータがありません。")
+                
     # --- 【新規】打った場所(1-10)ごとのショット率 ---
     st.divider()
     st.subheader("📍 打った位置別のショット決定率")
@@ -194,8 +340,10 @@ if mode == "🔴 AT分析":
         dodge_success = at_df.groupby(['起点', '抜き方']).size().unstack(fill_value=0)
         st.table(dodge_success)
 
-    st.subheader("🎯 ショットコース詳細 (3×3)")
-    st.plotly_chart(create_3x3_heatmap(at_df[at_df['結果']=='ゴール'], mode="course", title="ゴール決定コース"), use_container_width=True)
+    st.divider()
+        st.subheader("🎯 コース別 ショット決定率 (3×3)")
+        # 【修正点】単純な回数ではなく、新たに作成した決定率ベースのヒートマップ関数を呼び出す
+        st.plotly_chart(create_at_course_heatmap(at_df, title="ゴール数 / ショット数 (決定率%)"), use_container_width=True)
 
 # --- 【🔵 DF個人分析】 ---
 elif mode == "🔵 DF分析":
