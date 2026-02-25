@@ -90,15 +90,21 @@ st.sidebar.markdown("---")
 
 # 2x5 シュートエリアヒートマップ
 def create_area_heatmap(data_df, title="", mode="shooter"):
+    # キーを文字列('1')に変更
     area_map = {
-        1: (0, 0), 2: (0, 1), 3: (0, 2), 4: (0, 3), 5: (0, 4),
-        6: (1, 0), 7: (1, 1), 8: (1, 2), 9: (1, 3), 10: (1, 4)
+        '1': (0, 0), '2': (0, 1), '3': (0, 2), '4': (0, 3), '5': (0, 4),
+        '6': (1, 0), '7': (1, 1), '8': (1, 2), '9': (1, 3), '10': (1, 4)
     }
     z = np.zeros((2, 5))
     text_labels = np.full((2, 5), "", dtype=object)
 
+    # ★ここを追加：空白(NaN)や小数(1.0)を、綺麗な文字列('1')に変換する
+    data_df = data_df.copy()
+    data_df['シュートエリア_clean'] = pd.to_numeric(data_df['シュートエリア'], errors='coerce').fillna(0).astype(int).astype(str)
+
     for area_num, (r, c) in area_map.items():
-        area_data = data_df[data_df['シュートエリア'].astype(str) == str(area_num)]
+        # ★修正：綺麗な文字列の列から探す
+        area_data = data_df[data_df['シュートエリア_clean'] == area_num]
         total = len(area_data)
         
         if total > 0:
@@ -325,3 +331,4 @@ elif mode == "🔵 ゴーリー分析":
 else:
     st.header("📊 全データ一覧")
     st.dataframe(df.drop(columns=['日時_raw']).sort_values('日時', ascending=False), use_container_width=True)
+
