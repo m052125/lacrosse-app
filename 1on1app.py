@@ -125,7 +125,7 @@ def create_at_course_heatmap(data_df, title=""):
         # そのコースに打たれた全ショットデータ
         course_data = shot_df[shot_df['コース'].astype(str) == course_num]
         total_shots = len(course_data)
-        goals = len(course_data[course_data['ショット結果'] == 'ゴール'])
+        goals = len(course_data[course_data['結果'] == 'ゴール'])
         
         if total_shots > 0:
             rate = (goals / total_shots) * 100
@@ -194,7 +194,7 @@ def create_goalie_origin_ratio_heatmap(data_df, title=""):
     for origin, (r, c) in mapping.items():
         origin_shots = shot_df[shot_df['起点'] == origin]
         total_shots = len(origin_shots)
-        saves = len(origin_shots[origin_shots['ショット結果'] == 'セーブ'])
+        saves = len(origin_shots[origin_shots['結果'] == 'セーブ'])
         
         if total_shots > 0:
             rate = (saves / total_shots) * 100
