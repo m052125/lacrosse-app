@@ -150,6 +150,101 @@ def create_at_course_heatmap(data_df, title=""):
     fig.update_layout(width=450, height=450, coloraxis_showscale=True)
     return fig
 
+# 【新規追加・DF分析用】起点別 被ショット率ヒートマップ
+def create_df_origin_ratio_heatmap(data_df, title=""):
+    grid_color = np.full((3, 3), np.nan) # 空白マスを透過させるためnanで初期化
+    grid_text = np.full((3, 3), "", dtype=object) 
+    
+    mapping = {
+        '左上': (0, 0), 'センター': (0, 1), '右上': (0, 2),
+        '左横': (1, 0), '右横': (1, 2),
+        '左裏': (2, 0), '右裏': (2, 2)
+    }
+    
+    for origin, (r, c) in mapping.items():
+        origin_data = data_df[data_df['起点'] == origin]
+        total_matchups = len(origin_data)
+        shots_allowed = len(origin_data[origin_data['終わり方'] == 'ショット'])
+        
+        if total_matchups > 0:
+            rate = (shots_allowed / total_matchups) * 100
+            grid_color[r, c] = rate
+            grid_text[r, c] = f"{shots_allowed}/{total_matchups}<br>({rate:.1f}%)"
+        else:
+            grid_color[r, c] = 0
+            grid_text[r, c] = "0/0<br>(0.0%)"
+            
+    fig = px.imshow(
+        grid_color, labels=dict(x="左右", y="位置", color="被ショット率(%)"),
+        x=['左', '中', '右'], y=['上', '横', '裏'], color_continuous_scale='Reds', title=title
+    )
+    fig.update_traces(text=grid_text, texttemplate="%{text}")
+    fig.update_layout(width=450, height=450, coloraxis_showscale=True)
+    return fig
+
+# 【新規追加・ゴーリー分析用】起点別 セーブ率ヒートマップ (2x2)
+def create_goalie_origin_ratio_heatmap(data_df, title=""):
+    grid_color = np.zeros((2, 2))
+    grid_text = np.empty((2, 2), dtype=object)
+    mapping = {'左上': (0, 0), '右上': (0, 1), '左裏': (1, 0), '右裏': (1, 1)}
+    
+    # ショットまで至ったデータのみを対象
+    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    
+    for origin, (r, c) in mapping.items():
+        origin_shots = shot_df[shot_df['起点'] == origin]
+        total_shots = len(origin_shots)
+        saves = len(origin_shots[origin_shots['結果'] == 'セーブ'])
+        
+        if total_shots > 0:
+            rate = (saves / total_shots) * 100
+            grid_color[r, c] = rate
+            grid_text[r, c] = f"{saves}/{total_shots}<br>({rate:.1f}%)"
+        else:
+            grid_color[r, c] = 0
+            grid_text[r, c] = "0/0<br>(0.0%)"
+            
+    fig = px.imshow(
+        grid_color, labels=dict(x="左右", y="位置", color="セーブ率(%)"),
+        x=['左', '右'], y=['上', '裏'], color_continuous_scale='Blues', title=title
+    )
+    fig.update_traces(text=grid_text, texttemplate="%{text}")
+    fig.update_layout(width=350, height=350, coloraxis_showscale=True)
+    return fig
+
+# 【新規追加・ゴーリー分析用】コース別 セーブ率ヒートマップ (3x3)
+def create_goalie_course_ratio_heatmap(data_df, title=""):
+    grid_color = np.zeros((3, 3)) 
+    grid_text = np.empty((3, 3), dtype=object) 
+    mapping = {
+        '1': (0, 0), '2': (0, 1), '3': (0, 2),
+        '4': (1, 0), '5': (1, 1), '6': (1, 2),
+        '7': (2, 0), '8': (2, 1), '9': (2, 2)
+    }
+    
+    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    
+    for course_num, (r, c) in mapping.items():
+        course_data = shot_df[shot_df['コース'].astype(str) == course_num]
+        total_shots = len(course_data)
+        saves = len(course_data[course_data['結果'] == 'セーブ'])
+        
+        if total_shots > 0:
+            rate = (saves / total_shots) * 100
+            grid_color[r, c] = rate
+            grid_text[r, c] = f"{saves}/{total_shots}<br>({rate:.1f}%)"
+        else:
+            grid_color[r, c] = 0
+            grid_text[r, c] = "0/0<br>(0.0%)"
+            
+    fig = px.imshow(
+        grid_color, labels=dict(x="左右", y="位置", color="セーブ率(%)"),
+        x=['左', '中', '右'], y=['上', '中', '下'], color_continuous_scale='Blues', title=title
+    )
+    fig.update_traces(text=grid_text, texttemplate="%{text}")
+    fig.update_layout(width=450, height=450, coloraxis_showscale=True)
+    return fig
+    
 # ==========================================
 # 3. サイドバー (分析モード切替)
 # ==========================================
@@ -295,12 +390,13 @@ elif mode == "🔵 DF分析":
     df_pivot['抜かれなかった'] = target_df.groupby('起点')['抜かれなかった'].sum()
     st.table(df_pivot)
 
-    st.plotly_chart(create_3x3_heatmap(target_df[target_df['抜かれた']==1], mode="origin", title="ショットを許した起点マップ"), use_container_width=True)
+    # 【修正点】回数ではなく、割合（被ショット数 / その起点での対戦数）を表示するヒートマップに変更
+    st.plotly_chart(create_df_origin_ratio_heatmap(target_df, title="起点別 被ショット率マップ (3×3)"), use_container_width=True)
 
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー分析":
     # ゴーリー選択
-    unique_g_names = set(df['ゴーリー'].dropna().unique().tolist() + test_members)
+    unique_g_names = set(df['ゴーリー'].dropna().unique().tolist())
     g_list = ["全体"] + sorted(list(unique_g_names))
     selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
     if selected_g == "全体":
@@ -380,12 +476,11 @@ elif mode == "🟡 ゴーリー分析":
     # 3. ヒートマップセクション
     col_h1, col_h2 = st.columns(2)
     with col_h1:
-        # ショット起点ヒートマップ (2x2)
-        st.plotly_chart(create_2x2_origin_heatmap(g_df[g_df['終わり方']=='ショット'], title="ショット起点 (2×2マップ)"), use_container_width=True)
+        # 【修正点】回数ではなく、割合（セーブ数 / その起点から打たれたショット数）の2x2マップ
+        st.plotly_chart(create_goalie_origin_ratio_heatmap(g_df, title="起点別 セーブ率マップ (2×2)"), use_container_width=True)
     with col_h2:
-        # セーブコース (3x3)
-        st.plotly_chart(create_3x3_heatmap(g_df[g_df['結果'] == 'セーブ'], title="セーブコース分布 (3×3)"), use_container_width=True)
-
+        # 【修正点】回数ではなく、割合（セーブ数 / そのコースに打たれたショット数）の3x3マップ
+        st.plotly_chart(create_goalie_course_ratio_heatmap(g_df, title="コース別 セーブ率分布 (3×3)"), use_container_width=True)
 # --- 【📊 全データ】 ---
 else:
     st.header("📊 全データ一覧")
