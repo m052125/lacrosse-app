@@ -371,6 +371,31 @@ if mode == "🔴 AT分析":
     # 【修正点】単純な回数ではなく、新たに作成した決定率ベースのヒートマップ関数を呼び出す
     st.plotly_chart(create_at_course_heatmap(at_df, title="ゴール数 / ショット数 (決定率%)"), use_container_width=True)
 
+    # ----------------------------------------------------
+    # 【追加】ATの苦手なDFランキング
+    # ----------------------------------------------------
+    st.divider()
+    if selected_at == "全体":
+        st.subheader("🏆 全DFのショット阻止率ランキング (AT全体がショットに行けなかった割合)")
+    else:
+        st.subheader(f"⚠️ {selected_at} の苦手なDFランキング (ショットに行けなかった割合)")
+        
+    # DFごとの対戦成績を計算
+    df_stats = at_df.groupby('DF').agg(
+        対戦数=('終わり方', 'count'),
+        ショット数=('終わり方', lambda x: (x == 'ショット').sum())
+    ).reset_index()
+    
+    df_stats['ショットに行けなかった数'] = df_stats['対戦数'] - df_stats['ショット数']
+    df_stats['ショットに行けなかった割合(%)'] = (df_stats['ショットに行けなかった数'] / df_stats['対戦数'] * 100).round(1)
+    
+    # 割合が高い順（苦手な順）にソート。割合が同じ場合は対戦数が多い順
+    df_stats = df_stats.sort_values(by=['ショットに行けなかった割合(%)', '対戦数'], ascending=[False, False])
+    df_stats = df_stats.reset_index(drop=True)
+    df_stats.index = df_stats.index + 1 # 順位を1からにする
+    
+    st.dataframe(df_stats, use_container_width=True)
+
 # --- 【🔵 DF個人分析】 ---
 elif mode == "🔵 DF分析":
     unique_df_names = set(df['DF'].dropna().unique().tolist() + test_members)
@@ -417,6 +442,29 @@ elif mode == "🔵 DF分析":
 
     # 【修正点】回数ではなく、割合（被ショット数 / その起点での対戦数）を表示するヒートマップに変更
     st.plotly_chart(create_df_origin_ratio_heatmap(target_df, title="起点別 被ショット率マップ (3×3)"), use_container_width=True)
+
+    # ----------------------------------------------------
+    # 【追加】DFの苦手なATランキング
+    # ----------------------------------------------------
+    st.divider()
+    if selected_df == "全体":
+        st.subheader("🏆 全ATの突破率ランキング (DF全体が抜かれた割合)")
+    else:
+        st.subheader(f"⚠️ {selected_df} の苦手なATランキング (抜かれた割合)")
+        
+    at_stats = target_df.groupby('AT').agg(
+        対戦数=('終わり方', 'count'),
+        抜かれた数=('終わり方', lambda x: (x == 'ショット').sum())
+    ).reset_index()
+    
+    at_stats['抜かれた割合(%)'] = (at_stats['抜かれた数'] / at_stats['対戦数'] * 100).round(1)
+    
+    # 抜かれた割合が高い順（苦手な順）にソート
+    at_stats = at_stats.sort_values(by=['抜かれた割合(%)', '対戦数'], ascending=[False, False])
+    at_stats = at_stats.reset_index(drop=True)
+    at_stats.index = at_stats.index + 1
+    
+    st.dataframe(at_stats, use_container_width=True)
 
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー分析":
@@ -494,6 +542,33 @@ elif mode == "🟡 ゴーリー分析":
     with col_h2:
         # 【修正点】回数ではなく、割合（セーブ数 / そのコースに打たれたショット数）の3x3マップ
         st.plotly_chart(create_goalie_course_ratio_heatmap(g_df, title="コース別 セーブ率分布 (3×3)"), use_container_width=True)
+
+    # ----------------------------------------------------
+    # 【追加】ゴーリーの苦手なATランキング
+    # ----------------------------------------------------
+    st.divider()
+    if selected_g == "全体":
+        st.subheader("🏆 全ATの決定率ランキング (ゴーリー全体から見たセーブ率ワースト)")
+    else:
+        st.subheader(f"⚠️ {selected_g} の苦手なATランキング (セーブ率ワースト)")
+        
+    # ※特定のシューターで絞り込んでいる場合でも、ランキングは全員の中から出すため「g_full_df」を使用
+    g_full_shot_results = g_full_df[g_full_df['結果'].isin(['ゴール', 'セーブ'])]
+    
+    if not g_full_shot_results.empty:
+        g_ranking_stats = g_full_shot_results.groupby('AT').agg(
+            被ショット数=('結果', 'count'),
+            セーブ数=('結果', lambda x: (x == 'セーブ').sum())
+        ).reset_index()
+        
+        g_ranking_stats['セーブ率(%)'] = (g_ranking_stats['セーブ数'] / g_ranking_stats['被ショット数'] * 100).round(1)
+        
+        # セーブ率が低い順（苦手な順）にソート
+        g_ranking_stats = g_ranking_stats.sort_values(by=['セーブ率(%)', '被ショット数'], ascending=[True, False])
+        g_ranking_stats = g_ranking_stats.reset_index(drop=True)
+        g_ranking_stats.index = g_ranking_stats.index + 1
+        
+        st.dataframe(g_ranking_stats, use_container_width=True)
 # --- 【📊 全データ】 ---
 else:
     st.header("📊 全データ一覧")
