@@ -244,6 +244,57 @@ def create_goalie_course_ratio_heatmap(data_df, title=""):
     fig.update_traces(text=grid_text, texttemplate="%{text}")
     fig.update_layout(width=450, height=450, coloraxis_showscale=True)
     return fig
+
+# 【新規追加】ショット位置(1-10)の2x5割合ヒートマップ
+def create_shot_position_heatmap(data_df, mode="AT", title=""):
+    grid_color = np.zeros((2, 5)) 
+    grid_text = np.empty((2, 5), dtype=object) 
+    
+    # 1〜10の配置 (2x5グリッド)
+    mapping = {
+        '1': (0, 0), '2': (0, 1), '3': (0, 2), '4': (0, 3), '5': (0, 4),
+        '6': (1, 0), '7': (1, 1), '8': (1, 2), '9': (1, 3), '10': (1, 4)
+    }
+    
+    # ショットまで至ったデータのみを対象
+    shot_df = data_df[data_df['終わり方'] == 'ショット']
+    
+    for loc_num, (r, c) in mapping.items():
+        loc_data = shot_df[shot_df['ショット位置'].astype(str) == loc_num]
+        total_shots = len(loc_data)
+        
+        # モードに応じた計算と色分け
+        if mode == "AT":
+            success = len(loc_data[loc_data['結果'] == 'ゴール'])
+            color_scale = 'Reds'
+            c_label = "決定率(%)"
+        elif mode == "DF":
+            success = len(loc_data[loc_data['結果'] == 'ゴール'])
+            color_scale = 'Oranges'
+            c_label = "失点率(%)"
+        elif mode == "G":
+            success = len(loc_data[loc_data['結果'] == 'セーブ'])
+            color_scale = 'Blues'
+            c_label = "セーブ率(%)"
+            
+        if total_shots > 0:
+            rate = (success / total_shots) * 100
+            grid_color[r, c] = rate
+            # 場所番号を[1]のように記載して分かりやすくする
+            grid_text[r, c] = f"[{loc_num}]<br>{success}/{total_shots}<br>({rate:.1f}%)"
+        else:
+            grid_color[r, c] = 0
+            grid_text[r, c] = f"[{loc_num}]<br>0/0<br>(0.0%)"
+            
+    fig = px.imshow(
+        grid_color, labels=dict(x="左右", y="段", color=c_label),
+        x=['1', '2', '3', '4', '5'], y=['上段', '下段'], 
+        color_continuous_scale=color_scale, title=title
+    )
+    fig.update_traces(text=grid_text, texttemplate="%{text}")
+    # 2x5なので横長に設定
+    fig.update_layout(width=700, height=350, coloraxis_showscale=True)
+    return fig
     
 # ==========================================
 # 3. サイドバー (分析モード切替)
@@ -299,25 +350,11 @@ if mode == "🔴 AT分析":
             else:
                 st.info("利き手のデータがありません。")
                 
-    # --- 【新規】打った場所(1-10)ごとのショット率 ---
+    # --- 【修正】打った場所の2x5ヒートマップ ---
     st.divider()
     st.subheader("📍 打った位置別のショット決定率")
     if 'ショット位置' in at_df.columns:
-        at_shot_df = at_df[at_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
-        if not at_shot_df.empty:
-            loc_stats = at_shot_df.groupby('ショット位置').agg(
-                打った数=('結果', 'count'),
-                ゴール数=('結果', lambda x: (x == 'ゴール').sum())
-            ).reset_index()
-            loc_stats['ショット率(%)'] = (loc_stats['ゴール数'] / loc_stats['打った数'] * 100).round(1)
-            
-            # X軸を文字列にして1〜10の順番を揃えやすくする
-            loc_stats['ショット位置'] = loc_stats['ショット位置'].astype(str)
-            fig_at_loc = px.bar(loc_stats, x='ショット位置', y='ショット率(%)', color='ショット率(%)', 
-                                color_continuous_scale='Reds', text_auto=True, title="どのエリアから決めているか")
-            st.plotly_chart(fig_at_loc, use_container_width=True)
-        else:
-            st.info("ショット位置のデータがまだありません。")
+        st.plotly_chart(create_shot_position_heatmap(at_df, mode="AT", title="どのエリアから決めているか (決定率)"), use_container_width=True)
     else:
         st.info("スプレッドシートに「ショット位置」の列がまだありません。")
     
@@ -364,16 +401,11 @@ elif mode == "🔵 DF分析":
     with col_info3:
         st.metric("対戦したAT数", target_df['AT'].nunique())
 
+    # --- 【修正】ショットを打たれた場所の2x5ヒートマップ ---
     st.divider()
-    st.subheader("📍 ショットを打たれた位置の分布")
+    st.subheader("📍 ショットを打たれた位置の失点率")
     if 'ショット位置' in target_df.columns:
-        df_shot_df = target_df[target_df['終わり方'] == 'ショット'].dropna(subset=['ショット位置'])
-        if not df_shot_df.empty:
-            df_shot_df['ショット位置'] = df_shot_df['ショット位置'].astype(str)
-            fig_df_loc = px.pie(df_shot_df, names='ショット位置', hole=0.3, title="どのエリアまで侵入を許しているか")
-            st.plotly_chart(fig_df_loc, use_container_width=True)
-        else:
-            st.info("ショット位置のデータがまだありません。")
+        st.plotly_chart(create_shot_position_heatmap(target_df, mode="DF", title="どのエリアからのショットで失点しやすいか (失点率)"), use_container_width=True)
     else:
         st.info("スプレッドシートに「ショット位置」の列がまだありません。")
         
@@ -419,22 +451,10 @@ elif mode == "🟡 ゴーリー分析":
     
     st.header(f"🧤 ゴーリー: {selected_g} (対 {header_name}) の分析結果")
 
+    # --- 【修正】打たれた場所の2x5ヒートマップ ---
     st.subheader("📍 打たれた位置別のセーブ率")
     if 'ショット位置' in g_df.columns:
-        g_shot_df = g_df[g_df['結果'].isin(['ゴール', 'セーブ'])].dropna(subset=['ショット位置'])
-        if not g_shot_df.empty:
-            g_loc_stats = g_shot_df.groupby('ショット位置').agg(
-                被ショット数=('結果', 'count'),
-                セーブ数=('結果', lambda x: (x == 'セーブ').sum())
-            ).reset_index()
-            g_loc_stats['セーブ率(%)'] = (g_loc_stats['セーブ数'] / g_loc_stats['被ショット数'] * 100).round(1)
-            
-            g_loc_stats['ショット位置'] = g_loc_stats['ショット位置'].astype(str)
-            fig_g_loc = px.bar(g_loc_stats, x='ショット位置', y='セーブ率(%)', color='セーブ率(%)', 
-                               color_continuous_scale='Blues', text_auto=True, title="どのエリアからのショットを止めやすいか")
-            st.plotly_chart(fig_g_loc, use_container_width=True)
-        else:
-            st.info("ショット位置のデータがまだありません。")
+        st.plotly_chart(create_shot_position_heatmap(g_df, mode="G", title="どのエリアからのショットを止めやすいか (セーブ率)"), use_container_width=True)
     else:
         st.info("スプレッドシートに「ショット位置」の列がまだありません。")
         
