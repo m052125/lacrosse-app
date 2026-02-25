@@ -36,6 +36,11 @@ if df.empty:
     st.stop()
 
 # ==========================================
+# 【新規追加】テスト用の先輩・コーチメンバーリスト
+# ==========================================
+test_members = ['#11', '#26', '#67', 'パズーさん', 'りむさん', 'うりさん', 'ばらさん', 'いずさん', 'はなさん']
+
+# ==========================================
 # 2. 共通ヒートマップ関数 (3×3)
 # ==========================================
 def create_3x3_heatmap(data_df, mode="course", title=""):
@@ -115,6 +120,7 @@ mode = st.sidebar.radio("表示モード", ["🔴 AT分析", "🔵 DF分析", "�
 
 # --- 【🔴 AT個人分析】 ---
 if mode == "🔴 AT分析":
+    unique_at = set(df['AT'].dropna().unique().tolist() + test_members)
     at_list = ["全体"] + sorted(list(df['AT'].dropna().unique()))
     selected_at = st.sidebar.selectbox("分析するATを選択", at_list)
     
@@ -193,6 +199,7 @@ if mode == "🔴 AT分析":
 
 # --- 【🔵 DF個人分析】 ---
 elif mode == "🔵 DF分析":
+    unique_df_names = set(df['DF'].dropna().unique().tolist() + test_members)
     df_list = ["全体"] + sorted(list(df['DF'].dropna().unique()))
     selected_df = st.sidebar.selectbox("分析するDFを選択", df_list)
     
@@ -244,14 +251,13 @@ elif mode == "🔵 DF分析":
 # --- 【🟡 ゴーリー詳細分析】 ---
 elif mode == "🟡 ゴーリー分析":
     # ゴーリー選択
-    g_list = ["全体"] + sorted(list(df['ゴーリー'].dropna().unique()))
-    selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
-    
+    unique_g_names = set(df['ゴーリー'].dropna().unique().tolist() + test_members)selected_g = st.sidebar.selectbox("分析するゴーリーを選択", g_list)
     if selected_g == "全体":
         g_full_df = df.dropna(subset=['ゴーリー']).copy()
     else:
         g_full_df = df[df['ゴーリー'] == selected_g].copy()
-    
+
+    unique_at_options = set(g_full_df['AT'].dropna().unique().tolist() + test_members)
     # 【新規】シューター（AT）選択プルダウン
     at_options = ["全体"] + sorted(list(g_full_df['AT'].dropna().unique()))
     selected_at = st.sidebar.selectbox("シューター(AT)を絞り込む", at_options)
