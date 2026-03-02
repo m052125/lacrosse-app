@@ -7,14 +7,14 @@ import json
 from datetime import datetime
 
 st.set_page_config(
-page_title=“京大ラクロス｜試合データ分析”,
-page_icon=“🥍”,
-layout=“wide”
+page_title="京大女子ラクロス｜試合データ分析",
+page_icon="🥍",
+layout="wide"
 )
 
 # ========== カスタムCSS ==========
 
-st.markdown(”””
+st.markdown("""
 
 <style>
   .block-container { padding-top: 1.5rem; }
@@ -36,25 +36,25 @@ st.markdown(”””
   }
 </style>
 
-“””, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ========== ユーティリティ ==========
 
-COURSE_NAMES = [‘左上’, ‘中上’, ‘右上’, ‘左中’, ‘中央’, ‘右中’, ‘左下’, ‘中下’, ‘右下’]
+COURSE_NAMES = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 def sec_to_mmss(sec):
 if sec is None or sec == 0:
-return “0:00”
+return "0:00"
 m, s = divmod(int(sec), 60)
-return f”{m}:{s:02d}”
+return f"{m}:{s:02d}"
 
-def make_goalie_heatmap(shots, side, title, enemy_name=“相手”):
+def make_goalie_heatmap(shots, side, title, enemy_name="相手"):
 grid_color = np.zeros((3, 3))
 grid_text  = np.empty((3, 3), dtype=object)
 for r in range(3):
 for c in range(3):
 idx = r * 3 + c
-cell = [s for s in shots if s.get(‘side’) == side and s.get(‘course’) == idx]
+cell = [s for s in shots if s.get('side') == side and s.get(‘course’) == idx]
 total = len(cell)
 saves = len([s for s in cell if s.get(‘result’) == ‘save’])
 goals = len([s for s in cell if s.get(‘result’) == ‘goal’])
@@ -632,7 +632,7 @@ else:
 # ========================================
 
 elif menu == “🥍 ドローデータ”:
-st.markdown(’<div class="section-badge">DRAW DATA</div>’, unsafe_allow_html=True)
+st.markdown('<div class="section-badge">DRAW DATA</div>’, unsafe_allow_html=True)
 st.subheader(“ドローデータ分析”)
 
 ```
@@ -724,11 +724,11 @@ else:
 
 # ========================================
 
-elif menu == “🥅 ゴーリーデータ”:
-st.markdown(’<div class="section-badge">GOALIE DATA</div>’, unsafe_allow_html=True)
-st.subheader(“ゴーリーデータ分析”)
+elif menu == "🥅 ゴーリーデータ":
+st.markdown('<div class="section-badge">GOALIE DATA</div>', unsafe_allow_html=True)
+st.subheader("ゴーリーデータ分析")
 
-```
+
 if not data["goalie"]:
     st.warning("ゴーリーデータのJSONをアップロードしてください")
 else:
