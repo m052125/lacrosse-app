@@ -73,7 +73,6 @@ def make_goalie_heatmap(shots, side, title, enemy_name="相手"):
     return fig
 
 def make_shot_course_heatmap(shots, side, result_filter=None, title="", enemy_name="相手"):
-    """コース別 被ショット数または得点数ヒートマップ"""
     filtered = [s for s in shots if s.get('side') == side]
     if result_filter:
         filtered = [s for s in filtered if s.get('result') == result_filter]
@@ -92,7 +91,6 @@ def make_shot_course_heatmap(shots, side, result_filter=None, title="", enemy_na
     return fig
 
 # ========== サイドバー ==========
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/120px-PNG_transparency_demonstration_1.png", width=0)
 st.sidebar.markdown("## 🥍 試合データ分析")
 st.sidebar.markdown("---")
 
@@ -205,7 +203,6 @@ if menu == "🏠 試合サマリー":
 
     cols = st.columns(4)
 
-    # スコア
     if data["game"]:
         shots = data["game"].get("shots", [])
         kyoto_score = len([s for s in shots if s["team"] == "kyoto" and s["result"] == "goal"])
@@ -226,7 +223,6 @@ if menu == "🏠 試合サマリー":
     st.markdown("---")
     col_s1, col_s2, col_s3 = st.columns(3)
 
-    # ポゼッション
     if data["possession"]:
         with col_s1:
             st.markdown("**⏱ ポゼッション**")
@@ -238,7 +234,6 @@ if menu == "🏠 試合サマリー":
             st.metric("OFポゼ合計", sec_to_mmss(total_sec))
             st.metric("得点平均時間", avg_goal)
 
-    # GB
     if data["gb_foul"]:
         with col_s2:
             st.markdown("**🏃 GBゲット率**")
@@ -249,7 +244,6 @@ if menu == "🏠 試合サマリー":
             st.metric("京大 GBゲット", k_gb, delta=f"vs {enemy_name}: {e_gb}")
             st.metric("GBゲット率", f"{pct}%" if pct is not None else "—")
 
-    # ゴーリー
     if data["goalie"]:
         with col_s3:
             st.markdown("**🥅 ゴーリー セーブ率**")
@@ -262,7 +256,6 @@ if menu == "🏠 試合サマリー":
                 st.metric(f"{label} セーブ率", f"{rate}%" if rate is not None else "—",
                           delta=f"{saves}セーブ/{total}本")
 
-    # Q別スコア推移
     if data["game"]:
         st.markdown("---")
         st.subheader("Q別スコア推移")
@@ -299,7 +292,6 @@ elif menu == "📊 スコア・ショット":
         shots = data["game"].get("shots", [])
         q_count = match_info.get("qCount", 4)
 
-        # 全体指標
         for team, label, color in [("kyoto", "京大", "#3b82f6"), ("enemy", enemy_name, "#ef4444")]:
             ts = [s for s in shots if s["team"] == team]
             goals = len([s for s in ts if s["result"] == "goal"])
@@ -315,7 +307,6 @@ elif menu == "📊 スコア・ショット":
 
         st.markdown("---")
 
-        # Q別集計テーブル
         st.subheader("Q別ショット内訳")
         q_rows = []
         for q in range(1, q_count + 1):
@@ -333,7 +324,6 @@ elif menu == "📊 スコア・ショット":
 
         st.markdown("---")
 
-        # 攻め方集計
         st.subheader("攻め方別集計（京大）")
         k_shots = [s for s in shots if s["team"] == "kyoto" and s.get("attack")]
         if k_shots:
@@ -354,7 +344,6 @@ elif menu == "📊 スコア・ショット":
                 fig.update_layout(height=320, margin=dict(t=40, b=0), paper_bgcolor="rgba(0,0,0,0)", font_color="#8ba3c7")
                 st.plotly_chart(fig, use_container_width=True)
 
-        # CL成功率
         cl = data["game"].get("clearance", {})
         if cl:
             st.markdown("---")
@@ -395,7 +384,6 @@ elif menu == "🔄 ターンオーバー":
             st.markdown("---")
 
             col_t1, col_t2 = st.columns(2)
-            CAUSES = ['PC', 'キープ', 'ファール', 'インター', 'ショット', 'チェイス', 'その他']
 
             with col_t1:
                 st.subheader("原因別（京大が奪われた）")
@@ -421,7 +409,6 @@ elif menu == "🔄 ターンオーバー":
                     fig2.update_xaxes(gridcolor="#1e2f4d"); fig2.update_yaxes(gridcolor="#1e2f4d")
                     st.plotly_chart(fig2, use_container_width=True)
 
-            # Q別TO推移
             st.markdown("---")
             st.subheader("Q別TOバランス")
             q_rows = []
@@ -452,7 +439,6 @@ elif menu == "⏱ ポゼッション":
         pd_data = data["possession"]
         q_count = match_info.get("qCount", 4)
 
-        # OFポゼ
         st.subheader("⚔️ OFポゼッション")
         of_by_q = pd_data.get("of_possession", {}).get("by_q", [])
         if of_by_q:
@@ -469,12 +455,6 @@ elif menu == "⏱ ポゼッション":
                 })
             st.dataframe(pd.DataFrame(of_rows), use_container_width=True, hide_index=True)
 
-            # OFポゼ時間の棒グラフ
-            fig_of = px.bar(
-                pd.DataFrame(of_rows), x="Q", y=[row["OF合計"] for row in of_rows],
-                title="Q別 OFポゼッション合計時間"
-            )
-            # 秒数で棒グラフ
             of_sec_rows = [{"Q": f"Q{q['q']}", "OFポゼ(秒)": q["total_sec"],
                              "得点": q["goal_count"], "TO": q["to_count"]}
                            for q in of_by_q if q["set_count"] > 0]
@@ -488,7 +468,6 @@ elif menu == "⏱ ポゼッション":
 
         st.markdown("---")
 
-        # CLRDポゼ
         st.subheader("🛡️ CLRDポゼッション（京大 vs 相手）")
         cl_by_q = pd_data.get("clrd_possession", {}).get("by_q", [])
         if cl_by_q:
@@ -528,7 +507,6 @@ elif menu == "🏃 GB・ファール":
         foul_records = gb_data.get("fouls", {}).get("records", [])
         gb_sum = gb_data.get("gb", {}).get("summary", {})
 
-        # GB指標
         st.subheader("🏃 GBゲット率")
         c1, c2, c3 = st.columns(3)
         c1.metric("京大 GBゲット", gb_sum.get("kyoto_get", 0))
@@ -536,7 +514,6 @@ elif menu == "🏃 GB・ファール":
         c3.metric("京大 ゲット率", f"{gb_sum.get('kyoto_pct', '—')}%" if gb_sum.get("kyoto_pct") is not None else "—")
 
         if gb_records:
-            # 場所別
             st.markdown("---")
             st.subheader("場所別 GBゲット")
             loc_data = gb_sum.get("by_location", [])
@@ -557,7 +534,6 @@ elif menu == "🏃 GB・ファール":
                 fig_loc.update_xaxes(gridcolor="#1e2f4d"); fig_loc.update_yaxes(gridcolor="#1e2f4d")
                 st.plotly_chart(fig_loc, use_container_width=True)
 
-        # ファール
         if foul_records:
             st.markdown("---")
             st.subheader("🚩 ファール分析")
@@ -604,7 +580,6 @@ elif menu == "🥍 ドローデータ":
         if not draws:
             st.info("ドローデータがありません")
         else:
-            # 全体指標
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("総ドロー数", summary.get("total", 0))
             c2.metric("京大ゲット", summary.get("got", 0))
@@ -614,7 +589,6 @@ elif menu == "🥍 ドローデータ":
 
             st.markdown("---")
 
-            # Q別
             st.subheader("Q別ドローゲット率")
             q_rows = []
             for q in range(1, q_count + 1):
@@ -629,7 +603,6 @@ elif menu == "🥍 ドローデータ":
             if q_rows:
                 st.dataframe(pd.DataFrame(q_rows), use_container_width=True, hide_index=True)
 
-            # ドロワー別
             st.markdown("---")
             st.subheader("ドロワー別ゲット率")
             drawer_stats = {}
@@ -661,7 +634,6 @@ elif menu == "🥍 ドローデータ":
                     fig_dr.update_xaxes(gridcolor="#1e2f4d"); fig_dr.update_yaxes(gridcolor="#1e2f4d")
                     st.plotly_chart(fig_dr, use_container_width=True)
 
-            # 取り方
             st.markdown("---")
             st.subheader("取り方別集計")
             way_counts = {}
@@ -693,7 +665,6 @@ elif menu == "🥅 ゴーリーデータ":
         if not shots:
             st.info("ゴーリーデータがありません")
         else:
-            # 全体指標
             for side, label, color in [("kyoto", "🔵 京大G", "#3b82f6"), ("enemy", f"🔴 {enemy_name}G", "#ef4444")]:
                 s = summary.get(side, {})
                 c1, c2, c3, c4 = st.columns(4)
@@ -706,7 +677,6 @@ elif menu == "🥅 ゴーリーデータ":
 
             st.markdown("---")
 
-            # ヒートマップ
             st.subheader("コース別 セーブ率ヒートマップ")
             col_h1, col_h2 = st.columns(2)
             with col_h1:
@@ -718,7 +688,6 @@ elif menu == "🥅 ゴーリーデータ":
 
             st.markdown("---")
 
-            # 被ショット分布
             st.subheader("被ショットコース分布")
             col_s1, col_s2 = st.columns(2)
             with col_s1:
@@ -728,7 +697,6 @@ elif menu == "🥅 ゴーリーデータ":
                 fig_es = make_shot_course_heatmap(shots, "enemy", title=f"{enemy_name}G — 被ショット数")
                 st.plotly_chart(fig_es, use_container_width=True)
 
-            # Q別テーブル
             st.markdown("---")
             st.subheader("Q別セーブ率")
             q_rows = []
@@ -746,7 +714,6 @@ elif menu == "🥅 ゴーリーデータ":
             if q_rows:
                 st.dataframe(pd.DataFrame(q_rows), use_container_width=True, hide_index=True)
 
-            # ゴーリー別
             st.markdown("---")
             st.subheader("ゴーリー別集計")
             g_rows = []
