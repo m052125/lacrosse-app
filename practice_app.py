@@ -19,7 +19,7 @@ st.set_page_config(
 # ==========================================
 S3_BUCKET   = "your-bucket-name"
 S3_KEY_FS   = "practice/freeshot.csv"   # フリシューCSV
-S3_KEY_1on1 = "practice/1on1.csv"       # 1on1 CSV
+S3_KEY_1on1 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjSO0rzNBiVYDqDPig3pX7SQCpo0RpKSGT231yRACUdD4arhDjpiUP0bcd7IjPaQGUI-g_gLO6ntBk/pub?gid=0&single=true&output=csv"       # 1on1 CSV
 S3_KEY_6on6_SHOT = "practice/6on6_shot.csv"
 S3_KEY_6on6_TO   = "practice/6on6_to.csv"
 S3_KEY_6on6_GB   = "practice/6on6_gb.csv"
